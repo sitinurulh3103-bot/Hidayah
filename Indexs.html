@@ -1,0 +1,462 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Petualangan Bahasa Arab - Super Mario Quiz</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Arabic & Retro Gaming -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        .font-arabic {
+            font-family: 'Amiri', serif;
+        }
+
+        /* Responsive Game Canvas Container */
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 960px;
+            aspect-ratio: 16 / 9;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #5c94fc;
+            border-radius: 0.75rem;
+        }
+
+        /* Retro Button Styles */
+        .btn-retro {
+            transition: all 0.1s ease;
+            box-shadow: 0px 4px 0px 0px rgba(0, 0, 0, 0.4);
+        }
+        .btn-retro:active {
+            transform: translateY(3px);
+            box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Custom Scrollbar for Modal */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 text-slate-100 bg-slate-950">
+
+    <!-- Top Header -->
+    <header class="w-full max-w-4xl flex justify-between items-center mb-3 px-2">
+        <div class="flex items-center space-x-3">
+            <div class="bg-red-600 text-white p-2 rounded-lg font-pixel text-xs sm:text-sm border-2 border-red-400">
+                MARIO ARABIC
+            </div>
+            <span class="text-xs sm:text-sm font-semibold text-slate-400 hidden sm:inline">Kelas 7: التعارف (Perkenalan)</span>
+        </div>
+        <button id="btn-restart-top" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs sm:text-sm flex items-center gap-1 transition shadow-md">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Reset Game
+        </button>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <div id="game-container" class="rounded-xl overflow-hidden border-4 border-slate-700 bg-sky-400 relative">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD Overlay -->
+        <div class="absolute top-3 left-3 right-3 flex justify-between items-center pointer-events-none text-white font-pixel text-xs sm:text-sm drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+            <div class="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20">
+                SKOR: <span id="hud-score" class="text-yellow-400">0</span>
+            </div>
+            <div class="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20">
+                RINTANGAN: <span id="hud-progress" class="text-emerald-400">0/10</span>
+            </div>
+        </div>
+
+        <!-- Touch Controls Overlay for Mobile -->
+        <div id="touch-controls" class="absolute bottom-2 left-2 right-2 flex justify-between items-center pointer-events-auto md:hidden opacity-80">
+            <div class="flex gap-2">
+                <button id="btn-left" class="w-12 h-12 bg-slate-800/80 active:bg-slate-600 text-white rounded-full flex items-center justify-center text-xl font-bold border-2 border-white/30 shadow-lg">◄</button>
+                <button id="btn-right" class="w-12 h-12 bg-slate-800/80 active:bg-slate-600 text-white rounded-full flex items-center justify-center text-xl font-bold border-2 border-white/30 shadow-lg">►</button>
+            </div>
+            <button id="btn-jump" class="w-14 h-14 bg-red-600/90 active:bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-pixel border-2 border-white/40 shadow-lg">JUMP</button>
+        </div>
+
+        <!-- Quiz Modal Overlay -->
+        <div id="quiz-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-30 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border-4 border-amber-500 rounded-2xl p-4 sm:p-6 w-full max-w-lg shadow-2xl flex flex-col justify-between max-h-[92%] overflow-y-auto custom-scrollbar">
+                
+                <!-- Modal Header -->
+                <div>
+                    <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-3">
+                        <span class="font-pixel text-xs text-amber-400 flex items-center gap-2">
+                            <span class="inline-block w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                            GERBANG KUIS RINTANGAN <span id="modal-gate-num">1</span>
+                        </span>
+                        <span class="text-xs text-slate-400 font-semibold">Pelajaran Bahasa Arab</span>
+                    </div>
+
+                    <!-- Question Arabic Text -->
+                    <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700 text-center mb-4 shadow-inner">
+                        <p class="text-slate-400 text-xs mb-1">Pertanyaan / Soal:</p>
+                        <p id="quiz-question-id" class="text-sm sm:text-base text-slate-200 font-medium mb-2"></p>
+                        <p id="quiz-question-ar" dir="rtl" class="font-arabic text-2xl sm:text-3xl text-amber-300 font-bold leading-relaxed"></p>
+                    </div>
+
+                    <!-- Notification Feedback -->
+                    <div id="quiz-feedback" class="hidden mb-3 p-2.5 rounded-lg text-center text-xs sm:text-sm font-bold transition-all"></div>
+
+                    <!-- Multiple Choice Options -->
+                    <div id="quiz-options" class="grid grid-cols-1 gap-2.5">
+                        <!-- Options injected dynamically by JS -->
+                    </div>
+                </div>
+
+                <p class="text-[10px] text-slate-500 text-center mt-4">Jawab pertanyaan dengan benar untuk membuka gerbang rintangan!</p>
+            </div>
+        </div>
+
+        <!-- Victory Screen Overlay -->
+        <div id="victory-modal" class="hidden absolute inset-0 bg-emerald-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center">
+            <div class="text-5xl mb-2 animate-bounce">🏆</div>
+            <h2 class="font-pixel text-xl sm:text-2xl text-yellow-300 mb-2">MANTAP! MUMTAZ!</h2>
+            <p class="text-sm sm:text-base text-emerald-100 max-w-md mb-6">Kamu berhasil melewati semua 10 rintangan dan menguasai kosakata Perkenalan Bahasa Arab Kelas 7!</p>
+            
+            <div class="bg-slate-900/80 border border-emerald-500/50 rounded-xl p-4 mb-6 w-full max-w-xs">
+                <div class="text-xs text-slate-400 mb-1">TOTAL SKOR AKHIR</div>
+                <div id="victory-score" class="font-pixel text-3xl text-amber-400">1000</div>
+            </div>
+
+            <button id="btn-restart-game" class="btn-retro bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm px-6 py-3 rounded-xl border-2 border-amber-300 flex items-center gap-2">
+                🎮 Main Lagi Dari Awal
+            </button>
+        </div>
+    </div>
+
+    <!-- Instructions Footer -->
+    <footer class="w-full max-w-4xl mt-3 text-center text-slate-400 text-xs flex flex-wrap justify-center gap-4 px-2">
+        <div class="flex items-center gap-1">
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">←</span>
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">→</span> atau 
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">A</span>
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">D</span> : Jalan
+        </div>
+        <div class="flex items-center gap-1">
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">Spasi</span> / 
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">↑</span> / 
+            <span class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px]">W</span> : Lompat
+        </div>
+    </footer>
+
+    <!-- Game Script Logic -->
+    <script>
+        // --- DATA SOAL BAHASA ARAB (10 SOAL KELAS 7 PERKENALAN) ---
+        const questionsData = [
+            {
+                id: 1,
+                qText: "Lengkapi kalimat jawaban perkenalan nama berikut:",
+                qArabic: "مَا اسْمُكَ؟ ... : ",
+                options: ["اسْمِي", "أَنَا مِنْ", "كَيْفَ حَالُكَ", "صَبَاحُ الْخَيْرِ"],
+                answer: 0
+            },
+            {
+                id: 2,
+                qText: "Jawaban untuk pertanyaan asal daerah/tempat berikut:",
+                qArabic: "مِنْ أَيْنَ أَنْتَ؟ ... : ",
+                options: ["أَهْلًا بِكَ", "أَنَا مِنْ", "إِلَى اللِّقَاءِ", "بِخَيْرٍ"],
+                answer: 1
+            },
+            {
+                id: 3,
+                qText: "Apakah kosa kata Bahasa Arab untuk \"Selamat Pagi\"?",
+                qArabic: "Selamat Pagi = ... ?",
+                options: ["مَعَ السَّلاَمَةِ", "مَسَاءُ الْخَيْرِ", "صَبَاحُ الْخَيْرِ", "أَهْلًا وَسَهْلًا"],
+                answer: 2
+            },
+            {
+                id: 4,
+                qText: "Jawaban atau balasan dari sapaan \"صَبَاحُ الْخَيْرِ\" adalah:",
+                qArabic: "صَبَاحُ الْخَيْرِ ⟵ ...",
+                options: ["صَبَاحُ النُّورِ", "مَسَاءُ النُّورِ", "أَهْلًا بِكَ", "عَفْوًا"],
+                answer: 0
+            },
+            {
+                id: 5,
+                qText: "Apa arti dari kata \"طَالِبٌ\" (Thalibun)?",
+                qArabic: "طَالِبٌ = ... ?",
+                options: ["Siswa Perempuan", "Guru Laki-laki", "Siswa Laki-laki", "Kepala Sekolah"],
+                answer: 2
+            },
+            {
+                id: 6,
+                qText: "Bahasa Arab yang tepat untuk \"Siswa Perempuan\" adalah:",
+                qArabic: "Siswa Perempuan = ... ?",
+                options: ["طَالِبٌ", "طَالِبَةٌ", "مُدَرِّسٌ", "مُدَرِّسَةٌ"],
+                answer: 1
+            },
+            {
+                id: 7,
+                qText: "Jawaban ketika ditanya kabar \"كَيْفَ حَالُكَ؟\" (Bagaimana kabarmu?):",
+                qArabic: "كَيْفَ حَالُكَ؟ ⟵ ...",
+                options: ["أَنَا بِخَيْرٍ", "إِلَى اللِّقَاءِ", "اسْمِي أَحْمَد", "أَنَا طَالِبٌ"],
+                answer: 0
+            },
+            {
+                id: 8,
+                qText: "Kata sapaan \"أَهْلًا وَسَهْلًا\" (Selamat datang) dibalas dengan:",
+                qArabic: "أَهْلًا وَسَهْلًا ⟵ ...",
+                options: ["صَبَاحُ الْخَيْرِ", "مَعَ السَّلاَمَةِ", "أَهْلًا بِكَ", "الْحَمْدُ لِلَّهِ"],
+                answer: 2
+            },
+            {
+                id: 9,
+                qText: "Bahasa Arab dari \"Saya seorang guru (laki-laki)\" adalah:",
+                qArabic: "Saya Guru (L) = ... ?",
+                options: ["أَنَا طَالِبٌ", "أَنَا مُدَرِّسٌ", "أَنَا طَالِبَةٌ", "أَنَا مُدَرِّسَةٌ"],
+                answer: 1
+            },
+            {
+                id: 10,
+                qText: "Ungkapan perpisahan \"إِلَى اللِّقَاءِ\" (Sampai jumpa) dibalas dengan:",
+                qArabic: "إِلَى اللِّقَاءِ ⟵ ...",
+                options: ["أَهْلًا بِكَ", "صَبَاحُ النُّورِ", "مَعَ السَّلاَمَةِ", "وَعَلَيْكُمُ السَّلاَمُ"],
+                answer: 2
+            }
+        ];
+
+        // --- GAME ENGINE & SETUP ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Virtual game resolution
+        const V_WIDTH = 960;
+        const V_HEIGHT = 540;
+        canvas.width = V_WIDTH;
+        canvas.height = V_HEIGHT;
+
+        // Game State Variables
+        let score = 0;
+        let currentGateIndex = 0;
+        let activeQuizGate = null;
+        let isQuizOpen = false;
+        let gameFinished = false;
+
+        // Controls State
+        const keys = {
+            left: false,
+            right: false,
+            up: false
+        };
+
+        // Player Character Object (Super Mario styled)
+        const player = {
+            x: 80,
+            y: 350,
+            width: 36,
+            height: 52,
+            vx: 0,
+            vy: 0,
+            speed: 5.2,
+            jumpStrength: -13.5,
+            gravity: 0.65,
+            isGrounded: false,
+            facingRight: true,
+            frame: 0,
+            animTimer: 0
+        };
+
+        // Level Map Objects
+        const groundY = 460;
+        let obstacles = [];
+        let platforms = [];
+        let coins = [];
+        let backgroundClouds = [];
+
+        // Initialize Level Structure
+        function initLevel() {
+            score = 0;
+            currentGateIndex = 0;
+            gameFinished = false;
+            player.x = 80;
+            player.y = 350;
+            player.vx = 0;
+            player.vy = 0;
+
+            // Generate Gates/Obstacles spaced out
+            obstacles = [];
+            const startX = 600;
+            const spacing = 500;
+
+            for (let i = 0; i < 10; i++) {
+                obstacles.push({
+                    id: i,
+                    x: startX + (i * spacing),
+                    y: groundY - 140,
+                    width: 44,
+                    height: 140,
+                    solved: false,
+                    questionData: questionsData[i]
+                });
+            }
+
+            // Platforms for Mario fun jumping
+            platforms = [
+                { x: 250, y: 350, w: 120, h: 24 },
+                { x: 450, y: 270, w: 100, h: 24 },
+                { x: 800, y: 340, w: 140, h: 24 },
+                { x: 1150, y: 280, w: 120, h: 24 },
+                { x: 1450, y: 350, w: 100, h: 24 },
+                { x: 1800, y: 310, w: 140, h: 24 },
+                { x: 2200, y: 270, w: 120, h: 24 },
+                { x: 2600, y: 340, w: 130, h: 24 },
+                { x: 3100, y: 280, w: 150, h: 24 },
+                { x: 3600, y: 330, w: 120, h: 24 },
+                { x: 4100, y: 290, w: 140, h: 24 },
+                { x: 4700, y: 320, w: 160, h: 24 }
+            ];
+
+            // Decorative background clouds
+            backgroundClouds = [];
+            for (let i = 0; i < 25; i++) {
+                backgroundClouds.push({
+                    x: Math.random() * 6000,
+                    y: 40 + Math.random() * 180,
+                    size: 30 + Math.random() * 40
+                });
+            }
+
+            // Decorative coins
+            coins = [];
+            platforms.forEach(p => {
+                coins.push({ x: p.x + p.w / 2, y: p.y - 30, collected: false });
+            });
+
+            updateHUD();
+        }
+
+        // --- INPUT LISTENERS ---
+        window.addEventListener('keydown', (e) => {
+            if (isQuizOpen) return;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') {
+                keys.up = true;
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.up = false;
+        });
+
+        // Mobile Touch Button Setup
+        function setupTouchControls() {
+            const bindBtn = (id, keyName) => {
+                const btn = document.getElementById(id);
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+                btn.addEventListener('mousedown', () => { keys[keyName] = true; });
+                btn.addEventListener('mouseup', () => { keys[keyName] = false; });
+            };
+            bindBtn('btn-left', 'left');
+            bindBtn('btn-right', 'right');
+            bindBtn('btn-jump', 'up');
+        }
+
+        // --- GAME LOOP & PHYSICS ---
+        function update() {
+            if (isQuizOpen || gameFinished) return;
+
+            // Horizontal Movement
+            if (keys.right) {
+                player.vx = player.speed;
+                player.facingRight = true;
+            } else if (keys.left) {
+                player.vx = -player.speed;
+                player.facingRight = false;
+            } else {
+                player.vx = 0;
+            }
+
+            // Jumping
+            if (keys.up && player.isGrounded) {
+                player.vy = player.jumpStrength;
+                player.isGrounded = false;
+            }
+
+            // Gravity
+            player.vy += player.gravity;
+
+            // Apply Movement
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Boundary Left
+            if (player.x < 10) player.x = 10;
+
+            // Ground Collision
+            if (player.y + player.height >= groundY) {
+                player.y = groundY - player.height;
+                player.vy = 0;
+                player.isGrounded = true;
+            }
+
+            // Platform Collision
+            platforms.forEach(p => {
+                if (player.x + player.width > p.x && 
+                    player.x < p.x + p.w &&
+                    player.y + player.height >= p.y &&
+                    player.y + player.height - player.vy <= p.y + 10 &&
+                    player.vy >= 0) {
+                    player.y = p.y - player.height;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                }
+            });
+
+            // Coin Collection
+            coins.forEach(c => {
+                if (!c.collected && Math.hypot((player.x + player.width/2) - c.x, (player.y + player.height/2) - c.y) < 25) {
+                    c.collected = true;
+                    score += 20;
+                    updateHUD();
+                }
+            });
+
+            // Obstacle / Gate Collision Trigger
+            obstacles.forEach(gate => {
+                if (!gate.solved) {
+                    // Check horizontal proximity to block player
+                    if (player.x + player.width >= gate.x && player.x <= gate.x + gate.width) {
+                        // Stop player from moving past gate
+                        if (player.vx > 0) {
+                            player.x = gate.x - player.width;
+    
